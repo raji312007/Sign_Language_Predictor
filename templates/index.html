@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SignAI - Gesture Prediction</title>
+    <style>
+        /* --- Global Resets & Base Styles --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        /* --- Typography --- */
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            margin-top: 1rem;
+        }
+
+        h1.main-title {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #60a5fa, #a855f7);
+            -webkit-background-clip: text;
+            color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: #9ca3af;
+            font-size: 1.125rem;
+        }
+
+        /* --- Unified App Container --- */
+        .app-widget {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            width: 100%;
+            max-width: 45rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* --- Mode Switcher (Segmented Control) --- */
+        .mode-switcher {
+            display: flex;
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 1rem;
+            padding: 0.5rem;
+            width: 100%;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 0.8rem;
+            border: none;
+            background: transparent;
+            color: #9ca3af;
+            font-weight: 700;
+            font-size: 1rem;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .mode-btn:hover {
+            color: white;
+        }
+
+        /* Active states for the toggle */
+        .mode-btn.active-blue {
+            background: #2563eb;
+            color: white;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        }
+
+        .mode-btn.active-purple {
+            background: #9333ea;
+            color: white;
+            box-shadow: 0 4px 15px rgba(147, 51, 234, 0.3);
+        }
+
+        /* --- Operation Areas --- */
+        .operation-area {
+            width: 100%;
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .operation-area.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* --- Media Elements --- */
+        .media-box {
+            width: 100%;
+            height: 22rem;
+            border-radius: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .drop-zone {
+            border: 2px dashed #4b5563;
+            background: rgba(31, 41, 55, 0.5);
+            transition: all 0.3s;
+        }
+
+        .drop-zone:hover {
+            border-color: #60a5fa;
+            background: rgba(31, 41, 55, 0.8);
+        }
+
+        .drop-zone svg {
+            width: 3.5rem;
+            height: 3.5rem;
+            color: #6b7280;
+            margin-bottom: 1rem;
+            transition: color 0.3s;
+        }
+
+        .drop-zone:hover svg { color: #60a5fa; }
+        
+        .drop-zone p { color: #9ca3af; font-size: 1.1rem; font-weight: 500; }
+        .drop-zone:hover p { color: #93c5fd; }
+
+        .file-input {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .preview-img {
+            width: 100%;
+            height: 22rem;
+            object-fit: contain;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 1rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid #4b5563;
+        }
+
+        .video-box {
+            background-color: #000;
+            border: 1px solid #374151;
+        }
+
+        .video-element {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transform: scaleX(-1);
+        }
+
+        .cam-text {
+            color: #6b7280;
+            font-size: 1.1rem;
+            font-weight: 500;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .cam-text svg { width: 3rem; height: 3rem; margin-bottom: 1rem; }
+
+        /* --- Result Box (Inside the Widget) --- */
+        #resultBox {
+            margin-top: 1.5rem;
+            width: 100%;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            border-radius: 1rem;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .result-label {
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .result-value {
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: white;
+        }
+
+        /* --- Buttons --- */
+        .btn {
+            font-weight: 700;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+            font-size: 1rem;
+            width: 100%;
+        }
+
+        .btn-group { display: flex; width: 100%; gap: 1rem; }
+        
+        .btn-blue { background-color: #2563eb; }
+        .btn-blue:hover { background-color: #3b82f6; }
+
+        .btn-purple { background-color: #9333ea; }
+        .btn-purple:hover { background-color: #a855f7; }
+
+        .btn-gray { background-color: #374151; }
+        .btn-gray:hover { background-color: #4b5563; }
+
+        .btn-red { background-color: #dc2626; }
+        .btn-red:hover { background-color: #ef4444; }
+
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 class="main-title">SignAI Predictor</h1>
+        <p class="subtitle">Real-time Sign Language Translation</p>
+    </header>
+
+    <main class="app-widget">
+        
+        <div class="mode-switcher">
+            <button id="toggleUpload" class="mode-btn active-blue" onclick="setMode('upload')">📸 Picture Mode</button>
+            <button id="toggleCam" class="mode-btn" onclick="setMode('cam')">🎥 Live Camera</button>
+        </div>
+
+        <div id="areaUpload" class="operation-area active">
+            <div id="dropZone" class="media-box drop-zone">
+                <input type="file" id="fileInput" class="file-input" accept="image/*">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                <p>Click or Drop Picture Here</p>
+            </div>
+            <img id="preview" class="preview-img hidden">
+            
+            <div class="btn-group">
+                <button id="resetBtn" onclick="resetUpload()" class="btn btn-gray hidden">Choose Another Picture</button>
+                <button id="predictBtn" onclick="uploadImage()" class="btn btn-blue">Predict Picture</button>
+            </div>
+        </div>
+
+        <div id="areaCam" class="operation-area">
+            <div class="media-box video-box">
+                <video id="webcam" autoplay playsinline class="video-element hidden"></video>
+                <div id="camText" class="cam-text">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    <p>Camera Offline</p>
+                </div>
+            </div>
+            
+            <div class="btn-group">
+                <button onclick="startWebcam()" id="camBtn" class="btn btn-gray">1. Turn On Camera</button>
+                <button onclick="toggleLivePrediction()" id="liveBtn" class="btn btn-purple" disabled>2. Start Predicting</button>
+            </div>
+        </div>
+
+        <div id="resultBox" class="hidden">
+            <p class="result-label">Detected Sign</p>
+            <h1 id="predictionText" class="result-value">-</h1>
+        </div>
+
+    </main>
+
+    <script>
+        // --- Widget Mode Switcher Logic ---
+        function setMode(mode) {
+            // Hide everything first
+            document.getElementById('areaUpload').classList.remove('active');
+            document.getElementById('areaCam').classList.remove('active');
+            document.getElementById('toggleUpload').classList.remove('active-blue');
+            document.getElementById('toggleCam').classList.remove('active-purple');
+            document.getElementById('resultBox').classList.add('hidden'); 
+
+            // Show selected mode inside the same widget
+            if (mode === 'upload') {
+                document.getElementById('areaUpload').classList.add('active');
+                document.getElementById('toggleUpload').classList.add('active-blue');
+                if (isPredicting) toggleLivePrediction(); // Stop live cam prediction if switching to upload
+            } else {
+                document.getElementById('areaCam').classList.add('active');
+                document.getElementById('toggleCam').classList.add('active-purple');
+            }
+        }
+
+        // --- Output Display Logic ---
+        function updatePrediction(text) {
+            const box = document.getElementById('resultBox');
+            document.getElementById('predictionText').innerText = text;
+            box.classList.remove('hidden');
+        }
+
+        // --- Picture Upload Logic ---
+        const fileInput = document.getElementById('fileInput');
+        const preview = document.getElementById('preview');
+        const dropZone = document.getElementById('dropZone');
+        const resetBtn = document.getElementById('resetBtn');
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) {
+                preview.src = URL.createObjectURL(e.target.files[0]);
+                preview.classList.remove('hidden');
+                dropZone.classList.add('hidden');
+                resetBtn.classList.remove('hidden'); 
+            }
+        });
+
+        function resetUpload() {
+            fileInput.value = ''; 
+            preview.src = '';
+            preview.classList.add('hidden');
+            dropZone.classList.remove('hidden');
+            resetBtn.classList.add('hidden');
+            document.getElementById('resultBox').classList.add('hidden');
+        }
+
+        async function uploadImage() {
+            if (!fileInput.files[0]) return alert("Please select a picture first!");
+            updatePrediction("...");
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            const response = await fetch('/predict_upload', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            updatePrediction(data.prediction || "Error");
+        }
+
+        // --- Live Video CV Logic ---
+        const video = document.getElementById('webcam');
+        const camText = document.getElementById('camText');
+        const liveBtn = document.getElementById('liveBtn');
+        let stream;
+        let isPredicting = false;
+        let predictionInterval;
+
+        async function startWebcam() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                video.classList.remove('hidden');
+                camText.classList.add('hidden');
+                liveBtn.disabled = false;
+            } catch (err) {
+                alert("Webcam access denied or unavailable.");
+            }
+        }
+
+        async function toggleLivePrediction() {
+            if (!stream) return;
+
+            isPredicting = !isPredicting;
+
+            if (isPredicting) {
+                liveBtn.innerText = "Stop Predicting";
+                liveBtn.classList.replace('btn-purple', 'btn-red');
+                updatePrediction("...");
+
+                predictionInterval = setInterval(async () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.translate(canvas.width, 0);
+                    ctx.scale(-1, 1);
+                    ctx.drawImage(video, 0, 0);
+                    
+                    const base64Image = canvas.toDataURL('image/jpeg', 0.6); 
+
+                    try {
+                        const response = await fetch('/predict_webcam', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ image: base64Image })
+                        });
+                        const data = await response.json();
+                        if (isPredicting) {
+                            updatePrediction(data.prediction || "?");
+                        }
+                    } catch(e) {
+                        console.error("Prediction error:", e);
+                    }
+                }, 400); 
+
+            } else {
+                liveBtn.innerText = "2. Start Predicting";
+                liveBtn.classList.replace('btn-red', 'btn-purple');
+                clearInterval(predictionInterval);
+            }
+        }
+    </script>
+</body>
+</html>
