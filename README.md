@@ -15,7 +15,7 @@ Follow these steps to set up and run the project locally.
 
 1. Clone the Repository
 Bash
-git clone [https://github.com/yourusername/SignAI.git](https://github.com/yourusername/SignAI.git)
+git clone [https://github.com/raji312007/Sign_Language_Predictor]
 cd SignAI
 2. Install Dependencies
 Make sure you have Python 3.x installed. It is recommended to use a virtual environment.
